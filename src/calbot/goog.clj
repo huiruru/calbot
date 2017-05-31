@@ -12,6 +12,10 @@
   (edn/read-string (slurp "/Users/huiru/google-creds.edn")))
 
 
+(defn get-date-time [start-date start-time]
+  (c/to-string (f/parse (string/join "T" [start-date start-time]))))
+
+
 (defn obtain-end-date 
   "given a start date string, duration number, and duration unit (mn-months, w-weeks, d-days, h-hours, m-minutes) calculate end datetime as string"
   [start-date duration duration-unit]
@@ -24,21 +28,20 @@
     start-date))
 
 
-(defn event-info 
-  "I don't know what I'm doing except getting user input"
-  []
-  (println "Enter title, then description, duration in minutes, then attendees by email (comma separated)")
-  (let [title (read-line) description (read-line) duration (read-line) attendees (read-line)]
-    (println (string/join " " [title description duration attendees]))))
+(defn print-event-info [title description location event-datetime end-datetime attendees]
+  "prints event information to be scheduled"
+  (println (string/join " " [title description location event-datetime end-datetime attendees])))
 
 
 (defn schedule-goog 
-  "given start-date and start time as strings, prompt user to enter in more info and schedule event"
-  [start-date start-time]
-  (println (string/join ["Need more information for event scheduled on " start-date " at " start-time]))
-  (event-info)
-  ;(gcal/add-calendar-day-event gcredentials "test-event" "clojure-test" "home" "2017-05-30" "2017-05-31" ["huiru@chartbeat.com"])
-  )
+  "given console params, print info and schedule event"
+  [start-date start-time duration-unit duration title description location attendees]
+  (let [event-datetime (get-date-time start-date start-time)
+        end-datetime (obtain-end-date event-datetime duration duration-unit)]
+  (println (c/to-string  event-datetime))
+  (println end-datetime)
+  (println (gcal/add-calendar-time-event gcredentials title description location event-datetime end-datetime attendees))
+  ))
 
 
 (defn list-event 

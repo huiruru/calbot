@@ -3,12 +3,15 @@
               [clojure.tools.cli :refer [parse-opts]]
               [clj-time.core :as t]
               [clj-time.local :as l]
+              [clj-time.coerce :as c]
+              [clj-time.format :as f]
               [calbot.goog :as goog])
     (:gen-class :main true))
 
 ; hack
 (def iso-date-pattern (re-pattern "\\d{4}-\\d{2}-\\d{2}"))
 (def iso-time-pattern (re-pattern "\\d{2}:\\d{2}"))
+(def valid-duration-units #{"mn" "w" "d" "h" "m"})
 
 ; simple validation function
 (defn date?
@@ -25,15 +28,36 @@
         (re-matches iso-time-pattern time-string)))
 
 
+(defn dunit?
+  "given duration unit string, false if not valid else return input"
+  [duration-unit]
+  (contains? valid-duration-units duration-unit))
+
+
 (def cli-options
   [["-d" "--date DATE" "The date of event to schedule or date for listing events"
-    :default (t/today)
-    ;;:parse-fn #(string? %)] 
+    :default (l/format-local-time (t/now) :date)
     :validate [#(date? %) "Should be a date"]]
-   ["-st" "--time TIME" "The start time of the event: 24 hr time format"
-    :default (l/format-local-time (l/local-now) :hour-minute)
+   ["-st" "--start-time TIME" "The start time of the event: 24 hr time format"
+    :default (l/format-local-time (t/now) :hour-minute)
     :validate [#(time? %) "Should be a time in 24 hr format"]]
+   ["-du" "--duration-unit DUNIT" "The duration unit abbrev string"
+    :default "h"
+    :validate [#(dunit? %) "Should be mn-months, w-weeks, d-days, h-hours, m-minutes"]]
+   ["-dr" "--duration DURATION" "The duration number"
+    :default 1
+    :parse-fn #(Integer/parseInt %)
+    :validate [#(< 0 % 0x1000) "Should be a number between 0 and 30"]]
+   ["-t" "--title TITLE" "Title of event"
+    :default "an event"]
+   ["-de" "--description DESCRIPTION" "Description of the event"
+    :default "default"]
+   ["-l" "--location LOCATION" "Location of the event"
+    :default "home"]
+   ["-a" "--attendees ATTENDEES" "Comma Separated list of emails"
+    :default ""]
    ["-h" "--help"]])
+
 
 
 (defn help [options]
@@ -56,7 +80,7 @@
 
 
 (def handlers
-  {:schedule #(goog/schedule-goog (:date %) (:time %))
+  {:schedule #(goog/schedule-goog (:date %) (:time %) (:dunit %) (:duration %) (:title %) (:description %) (:location %) (:attendees %))
    :list #(goog/list-event (:date %))})
 
 
